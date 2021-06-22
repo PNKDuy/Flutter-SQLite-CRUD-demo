@@ -35,6 +35,8 @@ class _MyHomePageState extends State<MyHomePage> {
   List<Contact> _contacts = [];
   DatabaseHelper _dbHelper;
   final _formKey = GlobalKey<FormState>();
+  final _ctrlName = TextEditingController();
+  final _ctrlMobile = TextEditingController();
 
   @override
   void initState(){
@@ -73,11 +75,13 @@ class _MyHomePageState extends State<MyHomePage> {
       child: Column(
         children: <Widget>[
           TextFormField(
+            controller: _ctrlName,
             decoration: InputDecoration(labelText:'Fullname'),
             onSaved: (value) => setState(() => _contact.name = value),
             validator: (value) => (value.length==0 ? 'This filed is required' :null),
           ),
           TextFormField(
+            controller: _ctrlMobile,
             decoration: InputDecoration(labelText:'Mobile'),
             onSaved: (value) => setState(() => _contact.mobile = value),
             validator: (value) => (value.length < 10 ? 'Atleast 10 characters required' :null),
@@ -107,10 +111,20 @@ class _MyHomePageState extends State<MyHomePage> {
 
     if(form.validate()){
       form.save();
-      await _dbHelper.insertContact(_contact);
+      if(_contact.id == null) await _dbHelper.insertContact(_contact);
+      else await _dbHelper.updateContact(_contact);
       _refreshContactList();
-      form.reset();
+      _resetForm();
     }
+  }
+
+  _resetForm() {
+    setState(() {
+      _formKey.currentState.reset();
+      _ctrlName.clear();
+      _ctrlMobile.clear();
+      _contact.id = null;
+    });
   }
 
   _list() => Expanded(
@@ -126,6 +140,19 @@ class _MyHomePageState extends State<MyHomePage> {
                 size: 40.0),
                 title: Text(_contacts[index].name.toUpperCase()),
                 subtitle: Text(_contacts[index].mobile),
+                trailing: IconButton(icon: Icon(Icons.delete_sweep),
+                onPressed: ()async{
+                  await _dbHelper.deleteContact(_contacts[index].id);
+                  _resetForm();
+                  _refreshContactList();
+                },),
+                onTap: (){
+                  setState(() {
+                    _contact = _contacts[index];
+                    _ctrlName.text = _contacts[index].name;
+                    _ctrlMobile.text = _contacts[index].mobile;
+                  });
+                },
               ),
               Divider(height: 5.0)
             ]
